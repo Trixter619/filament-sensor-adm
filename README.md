@@ -4,6 +4,62 @@
 
 Управляет штатным датчиком движения филамента `e0_sensor`.
 
+## Быстрая установка и настройка
+
+Все команды ниже выполняйте, когда принтер не печатает.
+
+1. В Fluidd/Mainsail откройте файл `mod_data/user.moonraker.conf` и добавьте:
+
+   ```ini
+   [update_manager filament_sensor_switch]
+   type: git_repo
+   channel: dev
+   path: /root/printer_data/config/mod_data/plugins/filament_sensor_switch
+   origin: https://github.com/Trixter619/filament-sensor-adm.git
+   is_system_service: False
+   primary_branch: main
+   ```
+
+   Сохраните файл и перезапустите Moonraker через веб-интерфейс.
+
+2. В консоли Fluidd/Mainsail установите и включите плагин:
+
+   ```gcode
+   ENABLE_PLUGIN name=filament_sensor_switch
+   ```
+
+   ZMOD скачает плагин и перезапустит Klipper. Дождитесь состояния «Готов».
+
+3. Один раз выберите датчик движения в ZMOD:
+
+   ```gcode
+   SAVE_ZMOD_DATA MOTION_SENSOR=1
+   ```
+
+   После изменения глобального параметра перезагрузите принтер. Если он уже равен `1`, повторять этот шаг не нужно. На родном экране отключите обработку датчика филамента, как рекомендует ZMOD.
+   `MOTION_SENSOR=1` остаётся сохранённым: плагин меняет только активность датчика, а не этот параметр.
+
+4. В OrcaSlicer откройте **профиль принтера → Machine G-code → Machine start G-code** и добавьте строку **перед существующим `START_PRINT`**:
+
+   ```gcode
+   FILAMENT_SENSOR_PREPARE MATERIAL={filament_type[0]}
+   ```
+
+   Существующий стартовый код сохраните. В профиле филамента укажите правильный тип материала, сохраните профиль принтера и заново нарежьте модель: старые G-code-файлы новую строку не получат.
+
+5. Проверьте в консоли:
+
+   ```gcode
+   FILAMENT_SENSOR_PREPARE MATERIAL=TPU
+   FILAMENT_SENSOR_STATUS
+   FILAMENT_SENSOR_PREPARE MATERIAL=PLA
+   FILAMENT_SENSOR_STATUS
+   ```
+
+   Ожидаемый результат: после TPU — **OFF**, после PLA — **ON**. При последующих печатях переключение выполняется автоматически, без перезагрузки.
+
+**Обновление:** обновите `filament_sensor_switch` через менеджер обновлений Fluidd/Mainsail, затем выполните `RESTART` в консоли, чтобы Klipper загрузил новый `.cfg`. Полная перезагрузка принтера для обновления макросов не нужна.
+
 ## Логика v4
 
 Перед печатью плагин устанавливает состояние датчика по типу материала, переданному из слайсера:
@@ -90,27 +146,9 @@ SAVE_ZMOD_DATA MOTION_SENSOR=1
 
 При использовании датчика движения документация ZMOD рекомендует отключить аналогичную обработку датчика на родном экране, иначе штатный интерфейс тоже может поставить печать на паузу.
 
-## Установка как внешний ZMOD-плагин
+## Отключение плагина
 
-Пример `mod_data/user.moonraker.conf`:
-
-```ini
-[update_manager filament_sensor_switch]
-type: git_repo
-channel: dev
-path: /root/printer_data/config/mod_data/plugins/filament_sensor_switch
-origin: https://github.com/Trixter619/filament-sensor-adm.git
-is_system_service: False
-primary_branch: main
-```
-
-После добавления репозитория:
-
-```gcode
-ENABLE_PLUGIN name=filament_sensor_switch
-```
-
-Удаление:
+В консоли Fluidd/Mainsail:
 
 ```gcode
 DISABLE_PLUGIN name=filament_sensor_switch
